@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2023 The Thingsboard Authors
+ * Copyright © 2016-2024 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import org.thingsboard.rule.engine.api.msg.DeviceAttributesEventNotificationMsg;
 import org.thingsboard.server.cluster.TbClusterService;
 import org.thingsboard.server.common.data.DataConstants;
 import org.thingsboard.server.common.data.EntityType;
@@ -37,15 +36,16 @@ import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.common.msg.queue.ServiceType;
 import org.thingsboard.server.common.msg.queue.TbCallback;
 import org.thingsboard.server.common.msg.queue.TopicPartitionInfo;
+import org.thingsboard.server.common.msg.rule.engine.DeviceAttributesEventNotificationMsg;
 import org.thingsboard.server.gen.transport.TransportProtos.ToCoreNotificationMsg;
 import org.thingsboard.server.queue.TbQueueProducer;
 import org.thingsboard.server.queue.common.TbProtoQueueMsg;
-import org.thingsboard.server.queue.discovery.NotificationsTopicService;
 import org.thingsboard.server.queue.discovery.PartitionService;
 import org.thingsboard.server.queue.discovery.TbApplicationEventListener;
 import org.thingsboard.server.queue.discovery.TbServiceInfoProvider;
-import org.thingsboard.server.queue.discovery.event.PartitionChangeEvent;
+import org.thingsboard.server.queue.discovery.TopicService;
 import org.thingsboard.server.queue.discovery.event.OtherServiceShutdownEvent;
+import org.thingsboard.server.queue.discovery.event.PartitionChangeEvent;
 import org.thingsboard.server.queue.provider.TbQueueProducerProvider;
 import org.thingsboard.server.queue.util.TbCoreComponent;
 import org.thingsboard.server.service.state.DefaultDeviceStateService;
@@ -71,7 +71,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultSubscriptionManagerService extends TbApplicationEventListener<PartitionChangeEvent> implements SubscriptionManagerService {
 
-    private final NotificationsTopicService notificationsTopicService;
+    private final TopicService topicService;
     private final PartitionService partitionService;
     private final TbServiceInfoProvider serviceInfoProvider;
     private final TbQueueProducerProvider producerProvider;
@@ -154,7 +154,7 @@ public class DefaultSubscriptionManagerService extends TbApplicationEventListene
     protected void onTbApplicationEvent(PartitionChangeEvent partitionChangeEvent) {
         if (ServiceType.TB_CORE.equals(partitionChangeEvent.getServiceType())) {
             entitySubscriptions.values().removeIf(sub ->
-                    !partitionService.resolve(ServiceType.TB_CORE, sub.getTenantId(), sub.getEntityId()).isMyPartition());
+                    !partitionService.isMyPartition(ServiceType.TB_CORE, sub.getTenantId(), sub.getEntityId()));
         }
     }
 
@@ -301,7 +301,7 @@ public class DefaultSubscriptionManagerService extends TbApplicationEventListene
         if (subInfo != null) {
             log.trace("[{}][{}] Handling alarm update {}: {}", tenantId, entityId, alarm, deleted);
             for (Map.Entry<String, TbSubscriptionsInfo> entry : subInfo.getSubs().entrySet()) {
-                if (entry.getValue().notifications) {
+                if (entry.getValue().alarms) {
                     onAlarmSubUpdate(entry.getKey(), entityId, alarm, deleted);
                 }
             }
@@ -325,7 +325,7 @@ public class DefaultSubscriptionManagerService extends TbApplicationEventListene
 
     private void sendCoreNotification(String targetServiceId, EntityId entityId, ToCoreNotificationMsg msg) {
         log.trace("[{}] Forwarding to remote service [{}]: {}", entityId, targetServiceId, msg);
-        TopicPartitionInfo tpi = notificationsTopicService.getNotificationsTopic(ServiceType.TB_CORE, targetServiceId);
+        TopicPartitionInfo tpi = topicService.getNotificationsTopic(ServiceType.TB_CORE, targetServiceId);
         TbProtoQueueMsg<ToCoreNotificationMsg> queueMsg = new TbProtoQueueMsg<>(entityId.getId(), msg);
         toCoreNotificationsProducer.send(tpi, queueMsg, null);
     }

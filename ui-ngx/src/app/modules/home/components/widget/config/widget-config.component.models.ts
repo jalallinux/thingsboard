@@ -1,5 +1,5 @@
 ///
-/// Copyright © 2016-2023 The Thingsboard Authors
+/// Copyright © 2016-2024 The Thingsboard Authors
 ///
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import { DataKey, DatasourceType, KeyInfo, WidgetConfigMode } from '@shared/mode
 import { WidgetConfigComponent } from '@home/components/widget/widget-config.component';
 import { DataKeyType } from '@shared/models/telemetry/telemetry.models';
 import { isDefinedAndNotNull } from '@core/utils';
+import { IAliasController } from '@core/api/widget-api.models';
 
 export type WidgetConfigCallbacks = DatasourceCallbacks & WidgetActionCallbacks;
 
@@ -58,6 +59,10 @@ export abstract class BasicWidgetConfigComponent extends PageComponent implement
     return this.widgetConfigValue;
   }
 
+  get aliasController(): IAliasController {
+    return this.widgetConfigComponent.aliasController;
+  }
+
   widgetConfigChangedEmitter = new EventEmitter<WidgetConfigComponentData>();
   widgetConfigChanged = this.widgetConfigChangedEmitter.asObservable();
 
@@ -69,11 +74,11 @@ export abstract class BasicWidgetConfigComponent extends PageComponent implement
   ngOnInit() {}
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      if (!this.validateConfig()) {
-        this.onConfigChanged(this.prepareOutputConfig(this.configForm().getRawValue()));
-      }
-    }, 0);
+    if (!this.validateConfig()) {
+      setTimeout(() => {
+          this.onConfigChanged(this.prepareOutputConfig(this.configForm().getRawValue()));
+      }, 0);
+    }
   }
 
   protected setupConfig(widgetConfig: WidgetConfigComponentData) {

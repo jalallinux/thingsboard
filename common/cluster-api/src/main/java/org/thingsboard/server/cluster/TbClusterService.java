@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2023 The Thingsboard Authors
+ * Copyright © 2016-2024 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,6 @@ import org.thingsboard.server.gen.transport.TransportProtos.ToVersionControlServ
 import org.thingsboard.server.queue.TbQueueCallback;
 import org.thingsboard.server.queue.TbQueueClusterService;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface TbClusterService extends TbQueueClusterService {
@@ -84,7 +83,9 @@ public interface TbClusterService extends TbQueueClusterService {
 
     void onDeviceUpdated(Device device, Device old);
 
-    void onDeviceDeleted(Device device, TbQueueCallback callback);
+    void onDeviceDeleted(TenantId tenantId, Device device, TbQueueCallback callback);
+
+    void onDeviceAssignedToTenant(TenantId oldTenantId, Device device);
 
     void onResourceChange(TbResource resource, TbQueueCallback callback);
 
@@ -96,6 +97,6 @@ public interface TbClusterService extends TbQueueClusterService {
 
     void pushEdgeSyncResponseToCore(FromEdgeSyncResponse fromEdgeSyncResponse);
 
-    void sendNotificationMsgToEdge(TenantId tenantId, EdgeId edgeId, EntityId entityId, String body, EdgeEventType type, EdgeEventActionType action);
+    void sendNotificationMsgToEdge(TenantId tenantId, EdgeId edgeId, EntityId entityId, String body, EdgeEventType type, EdgeEventActionType action, EdgeId sourceEdgeId);
 
 }
